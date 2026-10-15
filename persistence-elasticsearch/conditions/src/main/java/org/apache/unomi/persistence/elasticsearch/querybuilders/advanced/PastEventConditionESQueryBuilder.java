@@ -164,7 +164,7 @@ public class PastEventConditionESQueryBuilder implements ConditionESQueryBuilder
     private ConditionBuilder.ConditionItem createPastEventMustNotExistCondition(String generatedPropertyKey) {
         ConditionBuilder conditionBuilder = definitionsService.getConditionBuilder();
         ConditionBuilder.ConditionItem keyEquals = conditionBuilder.profileProperty("systemProperties.pastEvents.key").equalTo(generatedPropertyKey);
-        return conditionBuilder.not(keyEquals);
+        return conditionBuilder.not(conditionBuilder.nested(keyEquals, "systemProperties.pastEvents"));
     }
 
     private Set<String> getProfileIdsMatchingEventCount(Condition eventCondition, int minimumEventCount, int maximumEventCount) {
