@@ -158,19 +158,20 @@ public class PropertyConditionOSQueryBuilder implements ConditionOSQueryBuilder 
                 final Object centerObj = condition.getParameter("center");
                 final Double distance = (Double) condition.getParameter("distance");
 
-                if (centerObj != null && distance != null) {
-                    String centerString;
-                    if (centerObj instanceof GeoPoint) {
-                        centerString = ((GeoPoint) centerObj).asString();
-                    } else if (centerObj instanceof String) {
-                        centerString = (String) centerObj;
-                    } else {
-                        centerString = centerObj.toString();
-                    }
-                    GeoDistanceType unit = unitString != null ? GeoDistanceType.valueOf(unitString) : GeoDistanceType.Plane;
-
-                    return Query.of(q->q.geoDistance(g->g.field(name).distance(distance + "").distanceType(unit).location(l->l.text(centerString))));
+                if (centerObj == null || distance == null) {
+                    throw new IllegalArgumentException("The 'center' and 'distance' parameters are required for the distance operator");
                 }
+                String centerString;
+                if (centerObj instanceof GeoPoint) {
+                    centerString = ((GeoPoint) centerObj).asString();
+                } else if (centerObj instanceof String) {
+                    centerString = (String) centerObj;
+                } else {
+                    centerString = centerObj.toString();
+                }
+                GeoDistanceType unit = unitString != null ? GeoDistanceType.valueOf(unitString) : GeoDistanceType.Plane;
+
+                return Query.of(q->q.geoDistance(g->g.field(name).distance(distance + "").distanceType(unit).location(l->l.text(centerString))));
         }
         return null;
     }
@@ -194,7 +195,7 @@ public class PropertyConditionOSQueryBuilder implements ConditionOSQueryBuilder 
         return Query.of(q->q.range(r->r
                 .field(name)
                 .gte(JsonData.of(convertDateToISO(dayStart.toDate())))
-                .lte(JsonData.of(convertDateToISO(dayAfterStart.toDate())))));
+                .lt(JsonData.of(convertDateToISO(dayAfterStart.toDate())))));
     }
 
     private Object convertDateToISO(Object dateValue) {

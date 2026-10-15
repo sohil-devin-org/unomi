@@ -20,6 +20,7 @@ package org.apache.unomi.persistence.elasticsearch.querybuilders.core;
 import co.elastic.clients.elasticsearch._types.FieldValue;
 import co.elastic.clients.elasticsearch._types.GeoDistanceType;
 import co.elastic.clients.elasticsearch._types.query_dsl.*;
+import co.elastic.clients.json.JsonData;
 import co.elastic.clients.util.ObjectBuilder;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.unomi.api.GeoPoint;
@@ -357,8 +358,9 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
                     .date(t -> withComparison(t.field(fieldName), convertDateToISO(value).toString(), comparisonOperator))
                     .build();
         } else if (value instanceof Number) {
+            // Untyped keeps the exact number (no conversion to double), like the OpenSearch builder
             return new RangeQuery.Builder()
-                    .number(t -> withComparison(t.field(fieldName), ((Number) value).doubleValue(), comparisonOperator))
+                    .untyped(t -> withComparison(t.field(fieldName), JsonData.of(value), comparisonOperator))
                     .build();
         } else if (value instanceof Collection<?>) {
             Iterator<?> iterator = ((Collection<?>) value).iterator();
@@ -377,9 +379,9 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
                         .build();
             } else if (val1 instanceof Number) {
                 return new RangeQuery.Builder()
-                        .number(t -> t.field(fieldName)
-                                .gte(((Number) val1).doubleValue())
-                                .lte(((Number) val2).doubleValue()))
+                        .untyped(t -> t.field(fieldName)
+                                .gte(JsonData.of(val1))
+                                .lte(JsonData.of(val2)))
                         .build();
             }
         }

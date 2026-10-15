@@ -99,7 +99,8 @@ import org.junit.runners.Suite.SuiteClasses;
         NodeIdentityIT.class,
         EventsCollectorIT.class,
         RolloverIT.class,
-        HealthCheckIT.class
+        HealthCheckIT.class,
+        PropertyConditionBackendParityIT.class
 })
 public class AllITs {
 }
