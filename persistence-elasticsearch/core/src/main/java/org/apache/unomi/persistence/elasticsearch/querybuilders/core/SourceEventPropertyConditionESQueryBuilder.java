@@ -22,12 +22,24 @@ import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder;
 import org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilderDispatcher;
+import org.apache.unomi.persistence.spi.conditions.ConditionContextHelper;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 public class SourceEventPropertyConditionESQueryBuilder implements ConditionESQueryBuilder {
+
+    // Same mapping as SourceEventPropertyConditionEvaluator: condition parameter -> field of the event source item
+    private static final Map<String, String> MAPPED_PROPERTIES = new LinkedHashMap<>();
+
+    static {
+        MAPPED_PROPERTIES.put("id", "itemId");
+        MAPPED_PROPERTIES.put("path", "properties.pageInfo.pagePath");
+        MAPPED_PROPERTIES.put("scope", "scope");
+        MAPPED_PROPERTIES.put("type", "itemType");
+    }
 
     public SourceEventPropertyConditionESQueryBuilder() {
     }
@@ -35,18 +47,19 @@ public class SourceEventPropertyConditionESQueryBuilder implements ConditionESQu
     private void appendFilterIfPropExist(List<Query> queries, Condition condition, String prop) {
         final Object parameter = condition.getParameter(prop);
         if (parameter != null && !"".equals(parameter)) {
-            queries.add(Query.of(q -> q.term(t -> t.field("source." + prop).value(v -> v.stringValue((String) parameter)))));
+            queries.add(Query.of(q -> q.term(t -> t.field("source." + MAPPED_PROPERTIES.get(prop)).value(v -> v.stringValue(ConditionContextHelper.foldToASCII((String) parameter))))));
         }
     }
 
     public Query buildQuery(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
         List<Query> queries = new ArrayList<>();
-        for (String prop : new String[] { "id", "path", "scope", "type" }) {
+        for (String prop : MAPPED_PROPERTIES.keySet()) {
             appendFilterIfPropExist(queries, condition, prop);
         }
 
         if (queries.isEmpty()) {
-            return null;
+            // Like the evaluator, a condition without any usable parameter matches everything
+            return Query.of(q -> q.matchAll(m -> m));
         } else if (queries.size() == 1) {
             return queries.get(0);
         } else {
