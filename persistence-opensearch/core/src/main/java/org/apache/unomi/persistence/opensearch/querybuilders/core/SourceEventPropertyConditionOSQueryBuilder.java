@@ -20,14 +20,26 @@ package org.apache.unomi.persistence.opensearch.querybuilders.core;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilder;
 import org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilderDispatcher;
+import org.apache.unomi.persistence.spi.conditions.ConditionContextHelper;
 import org.opensearch.client.opensearch._types.query_dsl.BoolQuery;
 import org.opensearch.client.opensearch._types.query_dsl.Query;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 public class SourceEventPropertyConditionOSQueryBuilder implements ConditionOSQueryBuilder {
+
+    // Same mapping as SourceEventPropertyConditionEvaluator: condition parameter -> field of the event source item
+    private static final Map<String, String> MAPPED_PROPERTIES = new LinkedHashMap<>();
+
+    static {
+        MAPPED_PROPERTIES.put("id", "itemId");
+        MAPPED_PROPERTIES.put("path", "properties.pageInfo.pagePath");
+        MAPPED_PROPERTIES.put("scope", "scope");
+        MAPPED_PROPERTIES.put("type", "itemType");
+    }
 
     public SourceEventPropertyConditionOSQueryBuilder() {
     }
@@ -35,13 +47,13 @@ public class SourceEventPropertyConditionOSQueryBuilder implements ConditionOSQu
     private void appendFilderIfPropExist(List<Query> queryBuilders, Condition condition, String prop){
         final Object parameter = condition.getParameter(prop);
         if (parameter != null && !"".equals(parameter)) {
-            queryBuilders.add(Query.of(q->q.term(t->t.field("source." + prop).value(v->v.stringValue((String) parameter)))));
+            queryBuilders.add(Query.of(q->q.term(t->t.field("source." + MAPPED_PROPERTIES.get(prop)).value(v -> v.stringValue(ConditionContextHelper.foldToASCII((String) parameter))))));
         }
     }
 
     public Query buildQuery(Condition condition, Map<String, Object> context, ConditionOSQueryBuilderDispatcher dispatcher) {
         List<Query> queryBuilders = new ArrayList<Query>();
-        for (String prop : new String[]{"id", "path", "scope", "type"}){
+        for (String prop : MAPPED_PROPERTIES.keySet()) {
             appendFilderIfPropExist(queryBuilders, condition, prop);
         }
 
@@ -56,7 +68,8 @@ public class SourceEventPropertyConditionOSQueryBuilder implements ConditionOSQu
                 return Query.of(q->q.bool(boolQueryBuilder.build()));
             }
         } else {
-            return null;
+            // Like the evaluator, a condition without any usable parameter matches everything
+            return Query.of(q -> q.matchAll(m -> m));
         }
     }
 }
