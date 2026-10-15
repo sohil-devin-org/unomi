@@ -44,6 +44,7 @@ import org.junit.runners.Suite.SuiteClasses;
         BasicIT.class,
         ConditionEvaluatorIT.class,
         ConditionQueryBuilderIT.class,
+        NestedConditionBackendParityIT.class,
         SegmentIT.class,
         ProfileServiceIT.class,
         PersonaIT.class,
