@@ -39,10 +39,10 @@ public class GeoLocationByPointSessionConditionESQueryBuilder implements Conditi
                 return Query.of(q -> q.geoDistance(g -> g.field(name).location(l -> l.latlon(latlong -> latlong.lat(circleLatitude).lon(circleLongitude))).distance(distance)));
             }
         } else if("rectangle".equals(type)) {
-            Double rectLatitudeNE = (Double) condition.getParameter("rectLatitudeNE");
-            Double rectLongitudeNE = (Double) condition.getParameter("rectLongitudeNE");
-            Double rectLatitudeSW = (Double) condition.getParameter("rectLatitudeSW");
-            Double rectLongitudeSW = (Double) condition.getParameter("rectLongitudeSW");
+            Double rectLatitudeNE = toDouble(condition.getParameter("rectLatitudeNE"));
+            Double rectLongitudeNE = toDouble(condition.getParameter("rectLongitudeNE"));
+            Double rectLatitudeSW = toDouble(condition.getParameter("rectLatitudeSW"));
+            Double rectLongitudeSW = toDouble(condition.getParameter("rectLongitudeSW"));
 
             if(rectLatitudeNE != null && rectLongitudeNE != null && rectLatitudeSW != null && rectLongitudeSW != null) {
                 return Query.of(q -> q.geoBoundingBox(g -> g
@@ -50,9 +50,9 @@ public class GeoLocationByPointSessionConditionESQueryBuilder implements Conditi
                                 .boundingBox(b -> b
                                         .coords(c -> c
                                                 .top(rectLatitudeNE)
-                                                .left(rectLongitudeNE)
+                                                .left(rectLongitudeSW)
                                                 .bottom(rectLatitudeSW)
-                                                .right(rectLongitudeSW)
+                                                .right(rectLongitudeNE)
                                         )
                                 )
                         )
@@ -63,4 +63,7 @@ public class GeoLocationByPointSessionConditionESQueryBuilder implements Conditi
         return null;
     }
 
+    private static Double toDouble(Object value) {
+        return value instanceof Number ? ((Number) value).doubleValue() : null;
+    }
 }
