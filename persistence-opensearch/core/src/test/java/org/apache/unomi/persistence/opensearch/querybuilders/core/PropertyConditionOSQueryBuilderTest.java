@@ -16,8 +16,11 @@
  */
 package org.apache.unomi.persistence.opensearch.querybuilders.core;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilderDispatcher;
+import org.joda.time.DateTime;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -27,6 +30,7 @@ import java.util.Arrays;
 import java.util.Collections;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -64,5 +68,45 @@ class PropertyConditionOSQueryBuilderTest {
 
         assertEquals("Impossible to build OS filter, missing value for condition using comparisonOperator: equals, and propertyName: properties.firstName",
             exception.getMessage());
+    }
+
+    @Test
+    void buildQuery_isDay_excludesStartOfNextDay() throws Exception {
+        Condition condition = new Condition();
+        condition.setParameter("comparisonOperator", "isDay");
+        condition.setParameter("propertyName", "properties.lastVisit");
+        condition.setParameter("propertyValueDate", new DateTime(2015, 2, 1, 12, 0).toDate());
+
+        JsonNode range = new ObjectMapper().readTree(new PropertyConditionOSQueryBuilder()
+            .buildQuery(condition, Collections.emptyMap(), dispatcher).toJsonString()).path("range").path("properties.lastVisit");
+
+        assertTrue(range.has("gte"), "isDay must start at the start of the day: " + range);
+        assertTrue(range.has("lt"), "isDay must use an exclusive upper bound: " + range);
+        assertFalse(range.has("lte"), "isDay must not include the start of the next day: " + range);
+    }
+
+    @Test
+    void buildQuery_longRangeValue_keepsFullPrecision() throws Exception {
+        Condition condition = new Condition();
+        condition.setParameter("comparisonOperator", "lessThan");
+        condition.setParameter("propertyName", "properties.bigCounter");
+        condition.setParameter("propertyValueInteger", 9007199254740993L);
+
+        JsonNode range = new ObjectMapper().readTree(new PropertyConditionOSQueryBuilder()
+            .buildQuery(condition, Collections.emptyMap(), dispatcher).toJsonString()).path("range").path("properties.bigCounter");
+
+        assertEquals(9007199254740993L, range.path("lt").asLong());
+    }
+
+    @Test
+    void buildQuery_distanceWithoutCenter_throwsIllegalArgumentException() {
+        Condition condition = new Condition();
+        condition.setParameter("comparisonOperator", "distance");
+        condition.setParameter("propertyName", "properties.location");
+        condition.setParameter("distance", 50000.0);
+
+        PropertyConditionOSQueryBuilder builder = new PropertyConditionOSQueryBuilder();
+
+        assertThrows(IllegalArgumentException.class, () -> builder.buildQuery(condition, Collections.emptyMap(), dispatcher));
     }
 }
