@@ -45,6 +45,11 @@ public class IdsConditionOSQueryBuilder implements ConditionOSQueryBuilder {
         Collection<String> ids = (Collection<String>) condition.getParameter("ids");
         Boolean match = (Boolean) condition.getParameter("match");
 
+        // Same as IdsConditionEvaluator: an empty or missing id list matches nothing, whatever the match value
+        if (ids == null || ids.isEmpty()) {
+            return Query.of(q -> q.matchNone(m -> m));
+        }
+
         if (ids.size() > maximumIdsQueryCount) {
             // Avoid building too big ids query - throw exception instead
             throw new UnsupportedOperationException("Too many profiles, exceeding the maximum number of ids query count: " + maximumIdsQueryCount);
@@ -60,7 +65,7 @@ public class IdsConditionOSQueryBuilder implements ConditionOSQueryBuilder {
         }
 
         Query idsQuery = Query.of(q->q.ids(i->i.values(prefixedIds)));
-        if (match) {
+        if (match == null || match) {
             return idsQuery;
         } else {
             return Query.of(q->q.bool(b->b.mustNot(idsQuery)));
