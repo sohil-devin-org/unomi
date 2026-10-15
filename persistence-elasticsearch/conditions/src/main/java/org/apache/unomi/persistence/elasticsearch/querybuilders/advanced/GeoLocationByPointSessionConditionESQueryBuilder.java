@@ -64,6 +64,6 @@ public class GeoLocationByPointSessionConditionESQueryBuilder implements Conditi
     }
 
     private static Double toDouble(Object value) {
-        return value instanceof Number ? ((Number) value).doubleValue() : null;
+        return value == null ? null : ((Number) value).doubleValue();
     }
 }
